@@ -1,4 +1,4 @@
-﻿//#define ADB_DEBUG
+﻿﻿//#define ADB_DEBUG
 
 using UnityEngine;
 using UnityEngine.Jobs;
@@ -249,17 +249,25 @@ namespace ADBRuntime.Internal
             internal bool isOptimize;
             public void Execute(int index)
             {
+                // 提前保存字段，减少全局内存访问次数
+                float3 myAddForcePower = addForcePower;
+                float myOneDivideIteration = oneDivideIteration;
+                float myDeltaTime = deltaTime;
+                bool myIsOptimize = isOptimize; 
+                bool myIsCollision = isCollision;
+                int myColliderCount = colliderCount;
+                int myPReadColliders = pReadColliders;
                 PointRead* pReadPoint = pReadPoints + index;
                 PointReadWrite* pReadWritePoint = pReadWritePoints + index;
                 if (pReadPoint->fixedIndex != index)
                 {
 
-                    EvaluatePosition(index, pReadPoint, pReadWritePoint, addForcePower, oneDivideIteration, deltaTime, isOptimize);
-                    if (isCollision)
+                    EvaluatePosition(index, pReadPoint, pReadWritePoint, myAddForcePower, myOneDivideIteration, myDeltaTime, myIsOptimize);
+                    if (myIsCollision)
                     {
-                        for (int i = 0; i < colliderCount; ++i)
+                        for (int i = 0; i < myColliderCount; ++i)
                         {
-                            ColliderRead* pReadCollider = pReadColliders + i;
+                            ColliderRead* pReadCollider = myPReadColliders + i;
 
                             if (pReadCollider->isOpen && (pReadPoint->colliderMask & pReadCollider->colliderChoice) != 0)
                             {
@@ -271,13 +279,13 @@ namespace ADBRuntime.Internal
                                  //OYM:但是这里其实有个bug，如果你想要将粒子包含在碰撞体内，而粒子却恰好在AABB外，就会出现不判断的情况。
                                  //OYM:如果你发现这种情况一直存在，可以尝试将AABB扩大一倍。
                                     ColliderReadWrite* pReadWriteCollider = pReadWriteColliders + i;
-                                    CollideProcess(pReadPoint, pReadWritePoint, pReadWriteCollider, pointRadius, oneDivideIteration, isColliderInsideMode);
+                                    CollideProcess(pReadPoint, pReadWritePoint, pReadWriteCollider, pointRadius, myOneDivideIteration, isColliderInsideMode);
                                 }
                             }
                         }
                     }
                 }
-                pReadWritePoint->position += oneDivideIteration * pReadWritePoint->deltaPosition * deltaTime * 60;//OYM：这里我想了很久,应该是这样,如果是迭代n次的话,那么deltaposition将会被加上n次,正规应该是只加一次
+                pReadWritePoint->position += myOneDivideIteration * pReadWritePoint->deltaPosition * deltaTime * 60;//OYM：这里我想了很久,应该是这样,如果是迭代n次的话,那么deltaposition将会被加上n次,正规应该是只加一次
 
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -541,18 +549,14 @@ namespace ADBRuntime.Internal
             static void DistributionPower(float3 pushout, PointRead* pReadPoint, PointReadWrite* pReadWritePoint, CollideFunc collideFunc, float oneDivideIteration)
             {
                 float sqrPushout = math.lengthsq(pushout);
-                if (collideFunc == CollideFunc.InsideNoLimit || collideFunc == CollideFunc.OutsideNoLimit)
-                {
-                    pReadWritePoint->deltaPosition += 0.01f * oneDivideIteration * pReadPoint->addForceScale * pushout;
-                }
-                else
-                {
+                int flag = (collideFunc==collideFunc.InsideNoLimit|| collideFunc == CollideFunc.OutsideNoLimit)?1:0;
+                pReadWritePoint->deltaPosition +=(0.01f * oneDivideIteration * pReadPoint->addForceScale * pushout)*flag;
+            
 
-                    pReadWritePoint->deltaPosition += pushout;
-                    pReadWritePoint->deltaPosition *= (1 - pReadPoint->friction);
-                    pReadWritePoint->position += pushout;
+                pReadWritePoint->deltaPosition += pushout*(1-flag);
+                pReadWritePoint->deltaPosition *= (1 - pReadPoint->friction*(1-flag));
+                pReadWritePoint->position += pushout*(1-flag);
 
-                }
 
 
             }
