@@ -256,7 +256,7 @@ namespace ADBRuntime.Internal
                 bool myIsOptimize = isOptimize; 
                 bool myIsCollision = isCollision;
                 int myColliderCount = colliderCount;
-                int myPReadColliders = pReadColliders;
+                var myPReadColliders = pReadColliders;
                 PointRead* pReadPoint = pReadPoints + index;
                 PointReadWrite* pReadWritePoint = pReadWritePoints + index;
                 if (pReadPoint->fixedIndex != index)
@@ -549,7 +549,7 @@ namespace ADBRuntime.Internal
             static void DistributionPower(float3 pushout, PointRead* pReadPoint, PointReadWrite* pReadWritePoint, CollideFunc collideFunc, float oneDivideIteration)
             {
                 float sqrPushout = math.lengthsq(pushout);
-                int flag = (collideFunc==collideFunc.InsideNoLimit|| collideFunc == CollideFunc.OutsideNoLimit)?1:0;
+                int flag = (collideFunc == collideFunc.InsideNoLimit || collideFunc == CollideFunc.OutsideNoLimit)?1:0;
                 pReadWritePoint->deltaPosition +=(0.01f * oneDivideIteration * pReadPoint->addForceScale * pushout)*flag;
             
 
